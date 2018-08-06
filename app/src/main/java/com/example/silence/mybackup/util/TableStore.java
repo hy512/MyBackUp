@@ -16,13 +16,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
     第 0 行数据表示表头（字段名称）
  */
 public class TableStore implements List<TableStore.Row>, Serializable {
+    private static final long serialVersionUID = 100L;
+
     String[] head;
     Class[] type;
     Row[] body;
     int length;
     int width;
-    private static final int minLength = 16;
     private AtomicBoolean operating;
+
+    private final static int DEFAULT_CAPACITY = 10;
+    private final static int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
 
     public TableStore() {
         this.body = new Row[minLength];
@@ -40,6 +44,39 @@ public class TableStore implements List<TableStore.Row>, Serializable {
         this.type = type;
     }
 
+    @Override
+    public boolean add(Row row) {
+        ensureCapacityInternal(length+1);
+        this.body[this.length++ ] = row;
+        return true;
+    }
+    @Override
+    public void add(int index, Row element) {
+        if (index < 0 || index > length)
+            throw new IndexOutOfBoundsException(outOfBoundsMsg(index));
+        ensureCapacityInternal(length+1);
+        System.arraycopy(body, index, body, index+1, length - index);
+        body[index] = element;
+        length++;
+    }
+
+    @Override
+    public boolean addAll(@NonNull Collection c) {
+        return false;
+    }
+
+    @Override
+    public boolean addAll(int index, @NonNull Collection<? extends Row> c) {
+        return false;
+    }
+
+
+    @Override
+    public void clear() {
+        for (int l=0; l<length; l++)
+            body[l] = null;
+        this.length = 0;
+    }
 
     @Override
     public int size() {
@@ -54,7 +91,6 @@ public class TableStore implements List<TableStore.Row>, Serializable {
 
     @Override
     public boolean contains(Object o) {
-
         return indexOf(o) > 0;
     }
 
@@ -68,13 +104,6 @@ public class TableStore implements List<TableStore.Row>, Serializable {
         return body;
     }
 
-    @Override
-    public boolean add(Row row) {
-        this.body[this.length] = row;
-        if (this.length++ > this.body.length)
-            grow();
-        return true;
-    }
 
     @NonNull
     @Override
@@ -88,20 +117,9 @@ public class TableStore implements List<TableStore.Row>, Serializable {
         return false;
     }
 
-    @Override
-    public boolean addAll(int index, @NonNull Collection<? extends Row> c) {
-        return false;
-    }
 
-    @Override
-    public boolean addAll(@NonNull Collection c) {
-        return false;
-    }
 
-    @Override
-    public void clear() {
-        this.length = 0;
-    }
+
 
     @Override
     public Row get(int index) {
@@ -113,10 +131,7 @@ public class TableStore implements List<TableStore.Row>, Serializable {
         return null;
     }
 
-    @Override
-    public void add(int index, Row element) {
 
-    }
 
     @Override
     public Row remove(int index) {
@@ -175,6 +190,29 @@ public class TableStore implements List<TableStore.Row>, Serializable {
         return null;
     }
 
+    private void ensureCapacityInternal(int minCapacity) {
+        // 初始没有分配空间
+        if (this.body == null) {
+            minCapacity = Math.max(DEFAULT_CAPACITY, minCapacity);
+        }
+    }
+    private void ensureExplicitCapacity(int minCapacity) {
+        if (minCapacity - body.length > 0) {
+            grow(minCapacity);
+        }
+    }
+
+    private void grow(int minCapacity) {
+        int oldCapacity = body.length;
+        int newCapacity = oldCapacity + (oldCapacity >> 1);
+        if (newCapacity - minCapacity < 0)
+            newCapacity = minCapacity;
+        if (newCapacity - MAX_ARRAY_SIZE > 0)
+            newCapacity = hugeCapacity(minCapacity);
+        this.body = Arrays.copyOf(this.body, newCapacity);
+    }
+
+
     private void grow() {
         int newLength = this.length + this.length >> 1;
         if (newLength > Integer.MAX_VALUE)
@@ -184,6 +222,12 @@ public class TableStore implements List<TableStore.Row>, Serializable {
         for (int l = 0; l < width; l++)
             this.body = Arrays.copyOf(this.body, newLength);
     }
+    private int hugeCapacity(int minCapacity) {
+        if (minCapacity < 0)
+            throw new OutOfMemoryError();
+        return (minCapacity > MAX_ARRAY_SIZE)? Integer.MAX_VALUE: MAX_ARRAY_SIZE;
+    }
+
 
     // 越界信息
     private String outOfBoundsMsg(int index) {
@@ -206,9 +250,9 @@ public class TableStore implements List<TableStore.Row>, Serializable {
         }
     }
 
-    protected class Iter implements ListIterator<Row> {
+    protected  class Iter implements Iterator<Row> {
         int cursor;
-        int limit;
+        int limit;ArrayList
 
         Iter() {
             limit = TableStore.this.length;
@@ -223,8 +267,12 @@ public class TableStore implements List<TableStore.Row>, Serializable {
         @Override
         public Row next() {
 
-            return null;
+            if ()
+                return null;
         }
+    }
+    protected class ListIter extends Iter implements ListIterator<Row> {
+
 
         @Override
         public boolean hasPrevious() {
