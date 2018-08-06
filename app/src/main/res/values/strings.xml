@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">MyBackUp</string>
+    <string name="list_title">MyContacts</string>
+    <string name="list_options_tidy">整理</string>
+    <string name="list_options_backup">备份</string>
+    <string name="contact_title">联系人详情</string>
+    <string name="preferences_hints">特别说明：\n程序只有“同步”操作会将信息更改保存到设备，其他操作均不影响通讯信息。\n程序的备份还原功能并不是完全备份，如联系人备份手机号码只会备份号码，而不会区分“手机”、“家庭”、“公司”等描述信息。</string>
+</resources>

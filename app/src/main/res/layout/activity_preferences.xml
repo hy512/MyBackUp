@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".PreferencesActivity">
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="备份路径( 以“/”根路径开始的目录绝对路径)，默认备份在手机储存根目录。"
+        app:layout_constraintTop_toTopOf="parent" />
+    <EditText
+        android:id="@+id/store_path"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="默认为手机储存." />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/preferences_hints"/>
+</LinearLayout>
