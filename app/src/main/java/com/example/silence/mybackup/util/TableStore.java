@@ -7,10 +7,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 /*
     第 0 行数据表示表头（字段名称）
@@ -31,7 +35,7 @@ public class TableStore implements List<TableStore.Row>, Serializable {
     private final static int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
 
     public TableStore() {
-        this.body = new Row[minLength];
+        this.body = new Row[DEFAULT_CAPACITY];
         this.length = 0;
     }
 
@@ -64,92 +68,51 @@ public class TableStore implements List<TableStore.Row>, Serializable {
     }
 
     @Override
-    public boolean addAll(@NonNull Collection c) {
-        return false;
+    public boolean addAll(Collection<? extends Row> c) {
+        Object[] els = c.toArray();
+        int numNew = els.length;
+        ensureCapacityInternal(length+numNew);
+        System.arraycopy(this.body, length, els, 0, numNew);
+        length+=numNew;
+        return true;
     }
 
     @Override
     public boolean addAll(int index, @NonNull Collection<? extends Row> c) {
-        return false;
+        if (index < 0 || index > length) throw new IndexOutOfBoundsException(outOfBoundsMsg(index));
+
+        Object[] els = c.toArray();
+        int numNew = els.length;
+        ensureCapacityInternal(length + numNew);
+
+        int numMoved = length - index;
+        if (numMoved > 0) System.arraycopy(body, index, body, index+numNew, numMoved);
+
+        // 复制新元素
+        System.arraycopy(body, index, els, 0, numNew);
+        this.length += numNew;
+        return numNew != 0;
     }
 
 
     @Override
     public void clear() {
+        modCount++;
         for (int l = 0; l < length; l++)
             body[l] = null;
         this.length = 0;
     }
-
-    @Override
-    public int size() {
-        return length;
-    }
-
-    @Override
-    public boolean isEmpty() {
-        if (this.length > 0) return false;
-        return true;
-    }
-
     @Override
     public boolean contains(Object o) {
         return indexOf(o) > 0;
     }
-
-    @Override
-    public Iterator iterator() {
-        return null;
-    }
-
-    @Override
-    public Object[] toArray() {
-        return body;
-    }
-
-
-    @NonNull
-    @Override
-    public Object[] toArray(@NonNull Object[] a) {
-        return new Object[0];
-    }
-
-
-    @Override
-    public boolean remove(Object o) {
-        return false;
-    }
-
-
-    @Override
-    public Row get(int index) {
-        return null;
-    }
-
-    @Override
-    public Row set(int index, Row element) {
-        return null;
-    }
-
-
-    @Override
-    public Row remove(int index) {
-        return null;
-    }
-
-    @Override
-    public boolean retainAll(@NonNull Collection c) {
-        return false;
-    }
-
-    @Override
-    public boolean removeAll(@NonNull Collection c) {
-        return false;
-    }
-
     @Override
     public boolean containsAll(@NonNull Collection c) {
         return false;
+    }
+    @Override
+    public Row get(int index) {
+        return null;
     }
 
     @Override
@@ -165,22 +128,76 @@ public class TableStore implements List<TableStore.Row>, Serializable {
         }
         return -1;
     }
+    @Override
+    public boolean isEmpty() {
+        return length == 0;
+    }
+    @Override
+    public Iterator iterator() {
+        return new Itr();
+    }
 
     @Override
     public int lastIndexOf(Object o) {
-        return 0;
+        if (o==null) {
+            for (int i=length-1; i>=0; i--) {
+                if (body[i] == null) return i;
+            }
+        } else for (int i=length-1; i>=0; i--)
+            if (o.equals(body[i])) return i;
+        return -1;
     }
 
     @NonNull
     @Override
     public ListIterator<Row> listIterator() {
-        return null;
+        return new ListItr(0);
     }
 
     @NonNull
     @Override
     public ListIterator<Row> listIterator(int index) {
+        if (index < 0 || index > length) throw new IndexOutOfBoundsException(outOfBoundsMsg(index));
+        return new ListItr(index);
+    }
+    @Override
+    public boolean remove(Object o) {
+        int index = indexOf(o);
+        if (index >-1 && index < length) {
+            fastRemove(index);
+            return true;
+        }
+        return false;
+    }
+    @Override
+    public Row remove(int index) {
+        if (index >= length)
+            throw new IndexOutOfBoundsException(outOfBoundsMsg(index));
+        modCount++;
+        Row oldValue = body[index];
+
+        int numMoved = length-index-1;
+        if (numMoved > 0)
+            System.arraycopy(body, index+1, body, index, numMoved);
+        body[--length] = null;
+        return oldValue;
+    }
+    @Override
+    public boolean removeAll(@NonNull Collection c) {
+        Objects.requireNonNull(c);
+        return false;
+    }
+    @Override
+    public boolean retainAll(@NonNull Collection c) {
+        return false;
+    }
+    @Override
+    public Row set(int index, Row element) {
         return null;
+    }
+    @Override
+    public int size() {
+        return length;
     }
 
     @NonNull
@@ -188,6 +205,18 @@ public class TableStore implements List<TableStore.Row>, Serializable {
     public List<Row> subList(int fromIndex, int toIndex) {
         return null;
     }
+
+    @Override
+    public Object[] toArray() {
+        return body;
+    }
+
+    @NonNull
+    @Override
+    public Object[] toArray(@NonNull Object[] a) {
+        return new Object[0];
+    }
+
 
     private void ensureCapacityInternal(int minCapacity) {
         // 初始没有分配空间
@@ -203,6 +232,14 @@ public class TableStore implements List<TableStore.Row>, Serializable {
         if (minCapacity - body.length > 0) {
             grow(minCapacity);
         }
+    }
+
+    private void fastRemove(int index) {
+        modCount++;
+        int numMoved = length - index - 1;
+        if (numMoved > 0)
+        System.arraycopy(body, index, body, index +1, numMoved);
+        body[--length] = null;
     }
 
     private void grow(int minCapacity) {
@@ -243,14 +280,13 @@ public class TableStore implements List<TableStore.Row>, Serializable {
         }
     }
 
-    protected class Iter implements Iterator<Row> {
+    protected class Itr implements Iterator<Row> {
         int cursor;
-        int limit;
+        protected int limit = TableStore.this.length;
+        int lastRet = -1;
 
-        public Iter() {
-            limit = TableStore.this.length;
-            cursor = 0;
-        }
+        int expectedModCount = modCount;
+
 
         @Override
         public boolean hasNext() {
@@ -259,48 +295,108 @@ public class TableStore implements List<TableStore.Row>, Serializable {
 
         @Override
         public Row next() {
-
-            if ()
-                return null;
-        }
-    }
-
-    protected class ListIter extends Iter implements ListIterator<Row> {
-
-
-        @Override
-        public boolean hasPrevious() {
-            return cursor > 0;
-        }
-
-        @Override
-        public Row previous() {
-            return null;
-        }
-
-        @Override
-        public int nextIndex() {
-            return 0;
-        }
-
-        @Override
-        public int previousIndex() {
-            return 0;
+            if (expectedModCount != modCount)
+                throw new ConcurrentModificationException();
+            int i = cursor;
+            if (i >= limit)
+                throw new NoSuchElementException();
+            if (i >= body.length)
+                throw new ConcurrentModificationException();
+            cursor = i + 1;
+            return body[lastRet = i];
         }
 
         @Override
         public void remove() {
+            if (lastRet > 0)
+                throw new IllegalStateException();
+            if (modCount != expectedModCount)
+                throw new ConcurrentModificationException();
+            try {
+                TableStore.this.remove(lastRet);
+                cursor = lastRet;
+                lastRet = -1;
+                expectedModCount = modCount;
+                limit--;
+            } catch (IndexOutOfBoundsException e) {
+                throw new ConcurrentModificationException();
+            }
+        }
 
+//        @Override
+//        public void forEachRemaining(Consumer<? super Row> consumer) {
+//            Objects.requireNonNull(consumer);
+//            int size = TableStore.this.length;
+//            int i = cursor;
+//            if (i > size) return;
+//            Row[] elements = body;
+//            if (i >= body.length) throw new ConcurrentModificationException();
+//
+//            while (i != size && expectedModCount == modCount) consumer.accept(elements[i++]);
+//            cursor = i;
+//            lastRet = i - 1;
+//            if (expectedModCount != modCount) throw new ConcurrentModificationException();
+//        }
+    }
+
+    protected class ListItr extends Itr implements ListIterator<Row> {
+
+        ListItr(int index) {
+            super();
+            cursor = index;
+
+        }
+
+        @Override
+        public boolean hasPrevious() {
+            return cursor != 0;
+        }
+
+        @Override
+        public Row previous() {
+            if (expectedModCount != modCount) throw new ConcurrentModificationException();
+            int i = cursor - 1;
+            if (i < 0) throw new NoSuchElementException();
+            Row[] elements = TableStore.this.body;
+            if (i >= elements.length) throw new ConcurrentModificationException();
+            cursor = i;
+            return elements[lastRet = i];
+        }
+
+        @Override
+        public int nextIndex() {
+            return cursor;
+        }
+
+        @Override
+        public int previousIndex() {
+            return cursor - 1;
         }
 
         @Override
         public void set(Row row) {
-
+            if (lastRet < 0) throw new IllegalStateException();
+            if (expectedModCount != modCount) throw new ConcurrentModificationException();
+            try {
+                TableStore.this.set(lastRet, row);
+            } catch (IndexOutOfBoundsException e) {
+                throw new ConcurrentModificationException();
+            }
         }
 
         @Override
         public void add(Row row) {
-
+            if (expectedModCount != modCount) throw new ConcurrentModificationException();
+            try {
+                int i = cursor;
+                TableStore.this.add(i, row);
+                cursor = i + 1;
+                lastRet = -1;
+                expectedModCount = modCount;
+                limit++;
+            } catch (IndexOutOfBoundsException e) {
+                throw new ConcurrentModificationException();
+            }
         }
     }
 }
