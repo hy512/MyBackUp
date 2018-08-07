@@ -25,6 +25,8 @@ public class TableStore implements List<TableStore.Row>, Serializable {
     int width;
     private AtomicBoolean operating;
 
+    protected transient int modCount = 0;
+    private final static Row[] DEFAULTCAPACITY_EMPTY_ELEMENTDATA = {};
     private final static int DEFAULT_CAPACITY = 10;
     private final static int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
 
@@ -46,16 +48,17 @@ public class TableStore implements List<TableStore.Row>, Serializable {
 
     @Override
     public boolean add(Row row) {
-        ensureCapacityInternal(length+1);
-        this.body[this.length++ ] = row;
+        ensureCapacityInternal(length + 1);
+        this.body[this.length++] = row;
         return true;
     }
+
     @Override
     public void add(int index, Row element) {
         if (index < 0 || index > length)
             throw new IndexOutOfBoundsException(outOfBoundsMsg(index));
-        ensureCapacityInternal(length+1);
-        System.arraycopy(body, index, body, index+1, length - index);
+        ensureCapacityInternal(length + 1);
+        System.arraycopy(body, index, body, index + 1, length - index);
         body[index] = element;
         length++;
     }
@@ -73,7 +76,7 @@ public class TableStore implements List<TableStore.Row>, Serializable {
 
     @Override
     public void clear() {
-        for (int l=0; l<length; l++)
+        for (int l = 0; l < length; l++)
             body[l] = null;
         this.length = 0;
     }
@@ -118,9 +121,6 @@ public class TableStore implements List<TableStore.Row>, Serializable {
     }
 
 
-
-
-
     @Override
     public Row get(int index) {
         return null;
@@ -130,7 +130,6 @@ public class TableStore implements List<TableStore.Row>, Serializable {
     public Row set(int index, Row element) {
         return null;
     }
-
 
 
     @Override
@@ -156,11 +155,11 @@ public class TableStore implements List<TableStore.Row>, Serializable {
     @Override
     public int indexOf(Object o) {
         if (o == null) {
-            for(int i =0; i<length; i++) {
+            for (int i = 0; i < length; i++) {
                 if (body[i] == null) return i;
             }
         } else {
-            for (int i=0; i<length; i++) {
+            for (int i = 0; i < length; i++) {
                 if (o.equals(body[i])) return i;
             }
         }
@@ -192,11 +191,15 @@ public class TableStore implements List<TableStore.Row>, Serializable {
 
     private void ensureCapacityInternal(int minCapacity) {
         // 初始没有分配空间
-        if (this.body == null) {
+        if (this.body == DEFAULTCAPACITY_EMPTY_ELEMENTDATA) {
             minCapacity = Math.max(DEFAULT_CAPACITY, minCapacity);
         }
+        ensureExplicitCapacity(minCapacity);
     }
+
     private void ensureExplicitCapacity(int minCapacity) {
+        modCount++;
+
         if (minCapacity - body.length > 0) {
             grow(minCapacity);
         }
@@ -212,20 +215,10 @@ public class TableStore implements List<TableStore.Row>, Serializable {
         this.body = Arrays.copyOf(this.body, newCapacity);
     }
 
-
-    private void grow() {
-        int newLength = this.length + this.length >> 1;
-        if (newLength > Integer.MAX_VALUE)
-            newLength = Integer.MAX_VALUE;
-        if (newLength < this.minLength)
-            newLength = this.minLength;
-        for (int l = 0; l < width; l++)
-            this.body = Arrays.copyOf(this.body, newLength);
-    }
     private int hugeCapacity(int minCapacity) {
         if (minCapacity < 0)
             throw new OutOfMemoryError();
-        return (minCapacity > MAX_ARRAY_SIZE)? Integer.MAX_VALUE: MAX_ARRAY_SIZE;
+        return (minCapacity > MAX_ARRAY_SIZE) ? Integer.MAX_VALUE : MAX_ARRAY_SIZE;
     }
 
 
@@ -250,11 +243,11 @@ public class TableStore implements List<TableStore.Row>, Serializable {
         }
     }
 
-    protected  class Iter implements Iterator<Row> {
+    protected class Iter implements Iterator<Row> {
         int cursor;
-        int limit;ArrayList
+        int limit;
 
-        Iter() {
+        public Iter() {
             limit = TableStore.this.length;
             cursor = 0;
         }
@@ -271,12 +264,13 @@ public class TableStore implements List<TableStore.Row>, Serializable {
                 return null;
         }
     }
+
     protected class ListIter extends Iter implements ListIterator<Row> {
 
 
         @Override
         public boolean hasPrevious() {
-            return cursor>0;
+            return cursor > 0;
         }
 
         @Override
