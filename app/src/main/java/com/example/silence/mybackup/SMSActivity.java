@@ -10,6 +10,7 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.widget.TextView;
 
+import com.example.silence.mybackup.server.BackupServer;
 import com.example.silence.mybackup.server.ShortMessageServer;
 import com.example.silence.mybackup.util.TableStore;
 import com.example.silence.mybackup.util.ViewUtil;
@@ -25,7 +26,7 @@ import java.util.Map;
 
 public class SMSActivity extends AppCompatActivity {
 
-    ShortMessageServer server;
+    BackupServer server;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,14 +36,14 @@ public class SMSActivity extends AppCompatActivity {
         // Example of a call to a native method
         TextView tv = (TextView) findViewById(R.id.sample_text);
 
-        server = new ShortMessageServer(getContentResolver());
+        server =  ShortMessageServer.instance(getContentResolver());
 
         TableStore ms = server.load();
 
         tv.setText(ms.toString());
 //        tv.setText(server.load());
         try {
-            server.tidy("/storage/emulated/0/ms.json", ms);
+            server.store("/storage/emulated/0/ms.json", ms);
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -98,7 +98,7 @@ public class ContactsActivity extends AppCompatActivity {
                 R.string.list_options_tidy,
                 (View v) -> {
                     setContacts(this.contactServer.tidy(this.contacts));
-                    Log.d("--->", this.contacts.toString());
+//                    Log.d("--->", this.contacts.toString());
                     Toast.makeText(ContactsActivity.this, String.format("合并成功.联系人数量 %d.", this.contacts.size()), Toast.LENGTH_SHORT).show();
                 }));
         options.add(new ViewUtil.DialogOption(

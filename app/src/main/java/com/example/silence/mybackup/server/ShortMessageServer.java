@@ -16,16 +16,30 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
-public class ShortMessageServer {
-    private ContentResolver resolver;
-    ObjectMapper mapper = new ObjectMapper();
+public class ShortMessageServer extends AbsBackupServer {
+    private static ShortMessageServer server;
 
-    public ShortMessageServer(ContentResolver resolver) {
-        this.resolver = resolver;
+    private ShortMessageServer() {
     }
 
-    /*
+
+    public static BackupServer instance() throws IllegalStateException {
+        if (resolver == null)
+            throw new IllegalStateException(String.format("ContentResolver is null."));
+        if (server == null) server = new ShortMessageServer();
+        return server;
+    }
+
+
+    public static BackupServer instance(ContentResolver resolver) {
+        Objects.requireNonNull(resolver);
+        ShortMessageServer.resolver = resolver;
+        return instance();
+    }
+
+  /*
     public String load() {
         Map<String, com.example.silence.mymessage.entiry.PhoneSMS> sms = new HashMap<String, com.example.silence.mymessage.entiry.PhoneSMS>();
 
@@ -88,7 +102,24 @@ public class ShortMessageServer {
         return ms;
     }
 
-    public void tidy(String path, TableStore store) throws IOException {
+    @Override
+    public TableStore tidy() {
+        return null;
+    }
+
+
+    @Override
+    public TableStore retrieve() {
+        return null;
+    }
+
+    @Override
+    public void sync() {
+
+    }
+
+    @Override
+    public void store(String path, TableStore store) throws IOException {
         File json = new File(path);
         // 确保文件存在
         if (!json.exists()) {
