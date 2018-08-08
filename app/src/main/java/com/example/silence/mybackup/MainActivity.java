@@ -55,8 +55,8 @@ public class MainActivity extends AppCompatActivity {
 
         LocalActivityManager localActivity = new LocalActivityManager(MainActivity.this, false);
         localActivity.dispatchCreate(savedInstanceState);
-
         host.setup(localActivity);
+
 
         host.addTab(
                 host.newTabSpec("messages")

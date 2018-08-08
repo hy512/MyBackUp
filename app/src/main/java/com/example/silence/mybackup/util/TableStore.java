@@ -1,6 +1,7 @@
 package com.example.silence.mybackup.util;
 
-import android.support.annotation.NonNull;
+
+import org.codehaus.jackson.map.annotate.JsonSerialize;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -19,6 +20,7 @@ import java.util.function.Consumer;
 /*
     第 0 行数据表示表头（字段名称）
  */
+@JsonSerialize(using = TableStoreSerializer.class)
 public class TableStore implements List<TableStore.Row>, Serializable {
     private static final long serialVersionUID = 100L;
 
@@ -34,8 +36,8 @@ public class TableStore implements List<TableStore.Row>, Serializable {
     private final static int DEFAULT_CAPACITY = 10;
     private final static int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
 
-    public TableStore() {
-        this.body = new Row[DEFAULT_CAPACITY];
+    private TableStore() {
+        this.body = DEFAULTCAPACITY_EMPTY_ELEMENTDATA;
         this.length = 0;
     }
 
@@ -56,6 +58,7 @@ public class TableStore implements List<TableStore.Row>, Serializable {
         this.body[this.length++] = row;
         return true;
     }
+
     @Override
     public void add(int index, Row element) {
         if (index < 0 || index > length)
@@ -65,17 +68,19 @@ public class TableStore implements List<TableStore.Row>, Serializable {
         body[index] = element;
         length++;
     }
+
     @Override
     public boolean addAll(Collection<? extends Row> c) {
         Object[] els = c.toArray();
         int numNew = els.length;
-        ensureCapacityInternal(length+numNew);
+        ensureCapacityInternal(length + numNew);
         System.arraycopy(this.body, length, els, 0, numNew);
-        length+=numNew;
+        length += numNew;
         return true;
     }
+
     @Override
-    public boolean addAll(int index, @NonNull Collection<? extends Row> c) {
+    public boolean addAll(int index, Collection<? extends Row> c) {
         if (index < 0 || index > length) throw new IndexOutOfBoundsException(outOfBoundsMsg(index));
 
         Object[] els = c.toArray();
@@ -83,7 +88,7 @@ public class TableStore implements List<TableStore.Row>, Serializable {
         ensureCapacityInternal(length + numNew);
 
         int numMoved = length - index;
-        if (numMoved > 0) System.arraycopy(body, index, body, index+numNew, numMoved);
+        if (numMoved > 0) System.arraycopy(body, index, body, index + numNew, numMoved);
 
         // 复制新元素
         System.arraycopy(body, index, els, 0, numNew);
@@ -98,16 +103,19 @@ public class TableStore implements List<TableStore.Row>, Serializable {
             body[l] = null;
         this.length = 0;
     }
+
     @Override
     public boolean contains(Object o) {
         return indexOf(o) > 0;
     }
+
     @Override
-    public boolean containsAll(@NonNull Collection c) {
-        for (Object e: c)
+    public boolean containsAll(Collection c) {
+        for (Object e : c)
             if (!contains(e)) return false;
         return true;
     }
+
     @Override
     public Row get(int index) {
         rangeCheck(index);
@@ -122,15 +130,18 @@ public class TableStore implements List<TableStore.Row>, Serializable {
             }
         } else {
             for (int i = 0; i < length; i++) {
-                if (o.equals(body[i])) return i;
+                if (body[i] != null && body[i].equals(o)) return i;
+                // if (o.equals(body[i])) return i;
             }
         }
         return -1;
     }
+
     @Override
     public boolean isEmpty() {
         return length == 0;
     }
+
     @Override
     public Iterator iterator() {
         return new Itr();
@@ -138,36 +149,36 @@ public class TableStore implements List<TableStore.Row>, Serializable {
 
     @Override
     public int lastIndexOf(Object o) {
-        if (o==null) {
-            for (int i=length-1; i>=0; i--) {
+        if (o == null) {
+            for (int i = length - 1; i >= 0; i--) {
                 if (body[i] == null) return i;
             }
-        } else for (int i=length-1; i>=0; i--)
+        } else for (int i = length - 1; i >= 0; i--)
             if (o.equals(body[i])) return i;
         return -1;
     }
 
-    @NonNull
     @Override
     public ListIterator<Row> listIterator() {
         return new ListItr(0);
     }
 
-    @NonNull
     @Override
     public ListIterator<Row> listIterator(int index) {
         if (index < 0 || index > length) throw new IndexOutOfBoundsException(outOfBoundsMsg(index));
         return new ListItr(index);
     }
+
     @Override
     public boolean remove(Object o) {
         int index = indexOf(o);
-        if (index >-1 && index < length) {
+        if (index > -1 && index < length) {
             fastRemove(index);
             return true;
         }
         return false;
     }
+
     @Override
     public Row remove(int index) {
         if (index >= length)
@@ -175,22 +186,25 @@ public class TableStore implements List<TableStore.Row>, Serializable {
         modCount++;
         Row oldValue = body[index];
 
-        int numMoved = length-index-1;
+        int numMoved = length - index - 1;
         if (numMoved > 0)
-            System.arraycopy(body, index+1, body, index, numMoved);
+            System.arraycopy(body, index + 1, body, index, numMoved);
         body[--length] = null;
         return oldValue;
     }
+
     @Override
-    public boolean removeAll(@NonNull Collection c) {
+    public boolean removeAll(Collection c) {
         Objects.requireNonNull(c);
         return batchRemove(c, false);
     }
+
     @Override
-    public boolean retainAll(@NonNull Collection c) {
+    public boolean retainAll(Collection c) {
         Objects.requireNonNull(c);
         return batchRemove(c, true);
     }
+
     @Override
     public Row set(int index, Row element) {
         rangeCheck(index);
@@ -199,12 +213,12 @@ public class TableStore implements List<TableStore.Row>, Serializable {
         body[index] = element;
         return oldValue;
     }
+
     @Override
     public int size() {
         return length;
     }
 
-    @NonNull
     @Override
     public List<Row> subList(int fromIndex, int toIndex) {
         subListRangeCheck(fromIndex, toIndex, length);
@@ -216,14 +230,24 @@ public class TableStore implements List<TableStore.Row>, Serializable {
         return Arrays.copyOf(body, length);
     }
 
-    @NonNull
     @Override
     public <T> T[] toArray(T[] a) {
         if (a.length < length)
-            return (T[])Arrays.copyOf(body, length, a.getClass());
+            return (T[]) Arrays.copyOf(body, length, a.getClass());
         System.arraycopy(body, 0, a, 0, length);
         if (a.length > length) a[length] = null;
         return a;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < width; i++)
+            builder.append(head[i] + '\t');
+        builder.append('\n');
+        for (int i = 0; i < length; i++)
+            builder.append(get(i).toString());
+        return builder.toString();
     }
 
     private boolean batchRemove(Collection<? extends Row> c, boolean complement) {
@@ -231,19 +255,19 @@ public class TableStore implements List<TableStore.Row>, Serializable {
         int r = 0, w = 0;
         boolean modified = false;
         try {
-            for(; r < size(); r ++) {
+            for (; r < size(); r++) {
                 if (c.contains(elements[r]) == complement)
                     elements[w++] = elements[r];
             }
         } finally {
             // c.contains() 异常，前面的迭代没有成功完成。
-            if (r!= length) {
+            if (r != length) {
                 System.arraycopy(elements, r, elements, w, length - r);
                 // 操作后的元素数量
-                w += length -r;
+                w += length - r;
             }
             if (w != length) {
-                for (int i = w; i< length; i++)
+                for (int i = w; i < length; i++)
                     elements[i] = null;
                 modCount += length - w;
                 length = w;
@@ -274,7 +298,7 @@ public class TableStore implements List<TableStore.Row>, Serializable {
         modCount++;
         int numMoved = length - index - 1;
         if (numMoved > 0)
-        System.arraycopy(body, index, body, index +1, numMoved);
+            System.arraycopy(body, index, body, index + 1, numMoved);
         body[--length] = null;
     }
 
@@ -315,19 +339,124 @@ public class TableStore implements List<TableStore.Row>, Serializable {
                     ") > toIndex(" + toIndex + ")");
     }
 
-    protected static class Row {
+    // 自定义方法
+    public String field(int index) {
+        if (index < 0) index += width;
+        if (index < 0 || index >= width) throw new IndexOutOfBoundsException(outOfBoundsMsg(index));
+        return head[index];
+    }
+    public String[] fields() {
+        return Arrays.copyOf(head, width);
+    }
+
+    // 获取指定元素
+    public Object retrieve(int row, int col) {
+        if (row < 0) row += length;
+        if (col < 0) col += width;
+        if (row < 0 || row >= length || col < 0 || col > width)
+            throw new IndexOutOfBoundsException(String.format("row: %d, col: %d", row, col));
+        return get(row).get(col);
+    }
+
+    public Object retrieve(int row, String title) {
+        if (row < 0) row += length;
+        if (row >= length || row < 0) throw new IndexOutOfBoundsException(outOfBoundsMsg(row));
+        return get(row).get(title);
+    }
+
+    // 获取指定行
+    public Object[] retrieveRow(int index) {
+        if (index < 0) index += length;
+        if (index < 0 || index >= length)
+            throw new IndexOutOfBoundsException(outOfBoundsMsg(index));
+        return get(index).toArray();
+    }
+
+    // 获取指定列
+    public Object[] retrieveColumn(int index) {
+        if (index < 0) index += width;
+        if (index < 0 || index >= width) throw new IndexOutOfBoundsException(outOfBoundsMsg(index));
+        Object[] col = new Object[length];
+        for (int i = 0; i < length; i++)
+            col[i] = retrieve(i, index);
+        return col;
+    }
+
+    // 获取指定列
+    public Object[] retrieveColumn(String head) {
+        int index = -1;
+        if (head == null) {
+            for (int i = 0; i < width; i++)
+                if (this.head[i] == null) index = i;
+        } else {
+            for (int i = 0; i < width; i++)
+                if (head.equals(this.head[i])) index = i;
+        }
+        if (index == -1) throw new IllegalStateException("没有这个 title.");
+        return retrieveColumn(index);
+    }
+
+    // 插入行
+    public void insertRow(Object[] r) {
+        add(new Row(r));
+    }
+
+    public void insertRow(int index, Object[] r) {
+        add(index, new Row(r));
+    }
+
+    // 插入列
+//public void insertColumn(String head) {
+//
+//}
+    protected class Row {
         Object[] data;
 
         public Row(Object[] data) {
+            if (data.length != width) throw new IllegalStateException("Row width disaccord.");
             this.data = data;
+        }
+
+        public Object get(int index) {
+            if (index >= width) throw new IndexOutOfBoundsException(outOfBoundsMsg(index));
+            return data[index];
+        }
+
+        public Object get(String title) {
+            if (title == null) {
+                for (int i = 0; i < width; i++)
+                    if (data[i] == null) return data[i];
+            } else {
+                for (int i = 0; i < width; i++) {
+                    if (title.equals(head[i])) return data[i];
+                }
+            }
+            throw new IllegalStateException("没有这个 title.");
         }
 
         @Override
         public boolean equals(Object obj) {
-            if (obj != null && obj instanceof Row) {
-                return Arrays.equals(data, ((Row) obj).data);
+            if (obj != null) {
+                if (obj instanceof Row)
+                    return Arrays.equals(data, ((Row) obj).data);
+                else if (obj instanceof Object[])
+                    return Arrays.equals(data, (Object[]) obj);
             }
             return false;
+        }
+
+        public Object[] toArray() {
+            return Arrays.copyOf(data, width);
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder builder = new StringBuilder();
+            for (Object o : data) {
+                builder.append(o.toString() + '\t');
+            }
+            builder.append('\n');
+            return builder.toString();
         }
     }
 
