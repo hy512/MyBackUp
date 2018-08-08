@@ -56,7 +56,6 @@ public class TableStore implements List<TableStore.Row>, Serializable {
         this.body[this.length++] = row;
         return true;
     }
-
     @Override
     public void add(int index, Row element) {
         if (index < 0 || index > length)
@@ -66,7 +65,6 @@ public class TableStore implements List<TableStore.Row>, Serializable {
         body[index] = element;
         length++;
     }
-
     @Override
     public boolean addAll(Collection<? extends Row> c) {
         Object[] els = c.toArray();
@@ -76,7 +74,6 @@ public class TableStore implements List<TableStore.Row>, Serializable {
         length+=numNew;
         return true;
     }
-
     @Override
     public boolean addAll(int index, @NonNull Collection<? extends Row> c) {
         if (index < 0 || index > length) throw new IndexOutOfBoundsException(outOfBoundsMsg(index));
@@ -94,7 +91,6 @@ public class TableStore implements List<TableStore.Row>, Serializable {
         return numNew != 0;
     }
 
-
     @Override
     public void clear() {
         modCount++;
@@ -108,11 +104,14 @@ public class TableStore implements List<TableStore.Row>, Serializable {
     }
     @Override
     public boolean containsAll(@NonNull Collection c) {
-        return false;
+        for (Object e: c)
+            if (!contains(e)) return false;
+        return true;
     }
     @Override
     public Row get(int index) {
-        return null;
+        rangeCheck(index);
+        return body[index];
     }
 
     @Override
@@ -185,15 +184,20 @@ public class TableStore implements List<TableStore.Row>, Serializable {
     @Override
     public boolean removeAll(@NonNull Collection c) {
         Objects.requireNonNull(c);
-        return false;
+        return batchRemove(c, false);
     }
     @Override
     public boolean retainAll(@NonNull Collection c) {
-        return false;
+        Objects.requireNonNull(c);
+        return batchRemove(c, true);
     }
     @Override
     public Row set(int index, Row element) {
-        return null;
+        rangeCheck(index);
+
+        Row oldValue = body[index];
+        body[index] = element;
+        return oldValue;
     }
     @Override
     public int size() {
@@ -203,20 +207,52 @@ public class TableStore implements List<TableStore.Row>, Serializable {
     @NonNull
     @Override
     public List<Row> subList(int fromIndex, int toIndex) {
+        subListRangeCheck(fromIndex, toIndex, length);
         return null;
     }
 
     @Override
     public Object[] toArray() {
-        return body;
+        return Arrays.copyOf(body, length);
     }
 
     @NonNull
     @Override
-    public Object[] toArray(@NonNull Object[] a) {
-        return new Object[0];
+    public <T> T[] toArray(T[] a) {
+        if (a.length < length)
+            return (T[])Arrays.copyOf(body, length, a.getClass());
+        System.arraycopy(body, 0, a, 0, length);
+        if (a.length > length) a[length] = null;
+        return a;
     }
 
+    private boolean batchRemove(Collection<? extends Row> c, boolean complement) {
+        final Object[] elements = this.body;
+        int r = 0, w = 0;
+        boolean modified = false;
+        try {
+            for(; r < size(); r ++) {
+                if (c.contains(elements[r]) == complement)
+                    elements[w++] = elements[r];
+            }
+        } finally {
+            // c.contains() 异常，前面的迭代没有成功完成。
+            if (r!= length) {
+                System.arraycopy(elements, r, elements, w, length - r);
+                // 操作后的元素数量
+                w += length -r;
+            }
+            if (w != length) {
+                for (int i = w; i< length; i++)
+                    elements[i] = null;
+                modCount += length - w;
+                length = w;
+                modified = true;
+            }
+        }
+
+        return modified;
+    }
 
     private void ensureCapacityInternal(int minCapacity) {
         // 初始没有分配空间
@@ -262,6 +298,21 @@ public class TableStore implements List<TableStore.Row>, Serializable {
     // 越界信息
     private String outOfBoundsMsg(int index) {
         return "Index: " + index + ", Length: " + this.length;
+    }
+
+    private void rangeCheck(int index) {
+        if (index >= length)
+            throw new IndexOutOfBoundsException(outOfBoundsMsg(index));
+    }
+
+    static void subListRangeCheck(int fromIndex, int toIndex, int size) {
+        if (fromIndex < 0)
+            throw new IndexOutOfBoundsException(String.format("fromIndex = %d", fromIndex));
+        if (toIndex > size)
+            throw new IndexOutOfBoundsException(String.format("toIndex = %d", toIndex));
+        if (fromIndex > toIndex)
+            throw new IllegalArgumentException("fromIndex(" + fromIndex +
+                    ") > toIndex(" + toIndex + ")");
     }
 
     protected static class Row {
