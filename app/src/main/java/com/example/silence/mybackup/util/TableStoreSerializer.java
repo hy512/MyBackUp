@@ -24,7 +24,7 @@ public class TableStoreSerializer extends JsonSerializer<TableStore>{
         JavaType type = TypeFactory.defaultInstance().constructArrayType(String[].class);
         JsonSerializer serializers = provider.findTypedValueSerializer(type, true, null);
 
-        serializers.serialize(value.fields(), json, provider);
+        serializers.serialize(Arrays.copyOf(value.fields(), value.getWidth()), json, provider);
         for (TableStore.Row r : value) {
             serializers.serialize(r.toArray(),json,  provider);
         }

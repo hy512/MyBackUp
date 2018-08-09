@@ -32,6 +32,7 @@
         <activity android:name=".SMSActivity"></activity>
         <activity android:name=".ContactActivity"></activity>
         <activity android:name=".PreferencesActivity" android:theme="@style/Theme.AppCompat.Light.NoActionBar"></activity>
+        <activity android:name=".CallsActivity"></activity>
     </application>
 
 </manifest>

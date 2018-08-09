@@ -17,6 +17,8 @@ import android.view.View;
 import android.widget.TabHost;
 import android.widget.TextView;
 
+import com.example.silence.mybackup.server.AbsBackupServer;
+
 public class MainActivity extends AppCompatActivity {
 
     // Used to load the 'native-lib' library on application startup.
@@ -33,7 +35,7 @@ public class MainActivity extends AppCompatActivity {
         // 认定 path 中是不存在结尾 / 符号
         SharedPreferences preferences = getSharedPreferences("mybackup", Context.MODE_PRIVATE);
         if (preferences.getString("path", null) == null) {
-            if(Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
+            if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
                 // 设置默认目录
                 SharedPreferences.Editor editor = preferences.edit();
                 editor.putString("path", Environment.getExternalStorageDirectory().getAbsolutePath());
@@ -43,7 +45,7 @@ public class MainActivity extends AppCompatActivity {
                 AlertDialog dialog = new AlertDialog.Builder(MainActivity.this).create();
                 dialog.setTitle("启动失败");
                 dialog.setMessage("没有可用储存空间，请确认手机储存或 SD 卡状态.");
-                dialog.setButton(DialogInterface.BUTTON_POSITIVE, "退出程序", (DialogInterface target, int which)-> {
+                dialog.setButton(DialogInterface.BUTTON_POSITIVE, "退出程序", (DialogInterface target, int which) -> {
                     MainActivity.this.finish();
                 });
                 dialog.show();
@@ -56,7 +58,6 @@ public class MainActivity extends AppCompatActivity {
         LocalActivityManager localActivity = new LocalActivityManager(MainActivity.this, false);
         localActivity.dispatchCreate(savedInstanceState);
         host.setup(localActivity);
-
 
         host.addTab(
                 host.newTabSpec("messages")
@@ -73,10 +74,12 @@ public class MainActivity extends AppCompatActivity {
                                 MainActivity.this,
                                 ContactsActivity.class)));
 
-        TabHost.TabSpec tab3 = host.newTabSpec("calls")
+        host.addTab(host.newTabSpec("calls")
                 .setIndicator("通话记录")
-                .setContent(R.id.tab3);
-        host.addTab(tab3);
+                .setContent(new Intent(
+                        MainActivity.this,
+                        CallsActivity.class
+                )));
 
         host.addTab(
                 host.newTabSpec("preferences")

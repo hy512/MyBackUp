@@ -230,6 +230,7 @@ public class ContactServer {
                         .withValueBackReference(ContactsContract.Contacts.Data.RAW_CONTACT_ID, rawIndex)
                         .withValue(ContactsContract.Data.MIMETYPE, myContact.getPropKey(i))
                         .withValue(ContactsContract.Data.DATA1, myContact.getPropValue(i))
+                        .withYieldAllowed(true)
                         .build());
             }
         }
