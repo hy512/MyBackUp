@@ -25,11 +25,14 @@ import java.util.Objects;
 
 public class ShortMessageServer extends AbsBackupServer {
     public static int READ_SMS_REQUEST_CODE = 100;
-    Activity activity;
+
 
 
     public ShortMessageServer(Activity activity) {
-        this.activity = activity;
+        contentUri = Uri.parse("content://sms/");
+//        authority = "sms";
+        authority = "telephony";
+        this.context = activity;
     }
 
 
@@ -70,19 +73,19 @@ public class ShortMessageServer extends AbsBackupServer {
 */
 
     public TableStore load() {
-        ContentResolver resolver = activity.getContentResolver();
+        ContentResolver resolver = context.getContentResolver();
 
         String[] fields = new String[]{
-                Telephony.Mms._ID,
-                Telephony.TextBasedSmsColumns.DATE,
-                Telephony.TextBasedSmsColumns.PERSON,
-                Telephony.TextBasedSmsColumns.TYPE,
-                Telephony.TextBasedSmsColumns.ADDRESS,
-                Telephony.TextBasedSmsColumns.STATUS,
-                Telephony.TextBasedSmsColumns.READ,
-                Telephony.TextBasedSmsColumns.BODY
+                Telephony.Sms._ID,
+                Telephony.Sms.DATE,
+                Telephony.Sms.PERSON,
+                Telephony.Sms.TYPE,
+                Telephony.Sms.ADDRESS,
+                Telephony.Sms.STATUS,
+                Telephony.Sms.READ,
+                Telephony.Sms.BODY
         };
-        Cursor cursor = resolver.query(Uri.parse("content://sms/"), fields, null, null, null);
+        Cursor cursor = resolver.query(contentUri, fields, null, null, null);
         TableStore ms = new TableStore(fields);
         while (cursor.moveToNext()) {
             ms.insertRow(new Object[]{
@@ -120,14 +123,34 @@ public class ShortMessageServer extends AbsBackupServer {
 
 
     @Override
-    public void sync(TableStore store) {
+    public boolean sync(TableStore store)  {
         try {
+            TableStore local = load();
+            // 交集
+            TableStore intersection = store.clone();
+            intersection.retainAll(local);
+            // 新内容关于本地内容的补集, 不被需要
+            TableStore complementary = local;
+            complementary.removeAll(intersection);
+            local = null;
+            // 本地内容关于新内容的相对补集, 需要添加
+            store.removeAll(intersection);
+
+            // 插入
             batchInsert(store);
+            // 删除
+            batchDelete(complementary);
+            // 更新
+            batchUpdate(intersection);
+            return true;
+        } catch (CloneNotSupportedException e ) {
+            e.printStackTrace();
         } catch (RemoteException e) {
             e.printStackTrace();
         } catch (OperationApplicationException e) {
             e.printStackTrace();
         }
+        return false;
     }
 
     public void batchInsert(TableStore store) throws RemoteException, OperationApplicationException {
@@ -135,7 +158,7 @@ public class ShortMessageServer extends AbsBackupServer {
 
         ContentProviderOperation.Builder operation;
         for (int r = 0; r < store.size(); r++) {
-            operation = ContentProviderOperation.newInsert(Uri.parse("content://sms/"));
+            operation = ContentProviderOperation.newInsert(contentUri);
             for (int c = 0; c < store.getWidth(); c++) {
                 operation.withValue(store.field(c), store.retrieve(r, c));
             }
@@ -144,7 +167,14 @@ public class ShortMessageServer extends AbsBackupServer {
                     .build());
         }
 
-        activity.getContentResolver().applyBatch("sms", operations);
+        context.getContentResolver().applyBatch(authority, operations);
+    }
+
+    public void batchDelete(TableStore store) {
+
+    }
+    public void batchUpdate(TableStore store) {
+
     }
 
 }

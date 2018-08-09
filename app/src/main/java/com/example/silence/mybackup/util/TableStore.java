@@ -23,7 +23,7 @@ import java.util.function.Consumer;
  */
 @JsonSerialize(using = TableStoreSerializer.class)
 @JsonDeserialize(using = TableStoreDeserializer.class)
-public class TableStore extends SimpleList<TableStore.Row> implements Serializable {
+public class TableStore extends SimpleList<TableStore.Row> implements Serializable, Cloneable {
     private static final long serialVersionUID = 100L;
 
     String[] head;
@@ -132,18 +132,19 @@ public class TableStore extends SimpleList<TableStore.Row> implements Serializab
     // 插入空列
     public void insertColumnOfNull(int index, String h) {
         if (index < 0) index += width;
-        if (index < 0 || index > width) throw new IndexOutOfBoundsException(outOfBoundsMsg(index, width));
+        if (index < 0 || index > width)
+            throw new IndexOutOfBoundsException(outOfBoundsMsg(index, width));
 
         // 插入 head
-        int numMoved = width - index ;
+        int numMoved = width - index;
         if (numMoved > 0) {
             this.head = Arrays.copyOf(this.head, width + 1);
-            System.arraycopy(this.head, index, this.head, index+1, numMoved);
+            System.arraycopy(this.head, index, this.head, index + 1, numMoved);
         }
 
         modCount++;
         this.head[index] = h;
-        width ++;
+        width++;
         // 插入内容
         for (Row r : this) {
             r.add(index, null);
@@ -187,7 +188,7 @@ public class TableStore extends SimpleList<TableStore.Row> implements Serializab
     }
 
 
-    protected static class Row extends SimpleList {
+    public static class Row extends SimpleList {
         public Row(Object[] data, int width) {
             super(data);
         }
@@ -216,5 +217,9 @@ public class TableStore extends SimpleList<TableStore.Row> implements Serializab
         }
     }
 
+
+    public TableStore clone() throws CloneNotSupportedException {
+        return (TableStore) super.clone();
+    }
 }
 

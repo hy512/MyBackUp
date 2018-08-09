@@ -1,7 +1,10 @@
 package com.example.silence.mybackup.server;
 
+import android.app.Activity;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.net.Uri;
+import android.support.v7.app.AppCompatActivity;
 
 import com.example.silence.mybackup.util.TableStore;
 
@@ -10,11 +13,16 @@ import org.codehaus.jackson.map.ObjectMapper;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Comparator;
 
 public abstract class AbsBackupServer implements BackupServer {
     public static int READ_EXTERNAL_STORAGE_REQUEST_CODE = 1000;
     public static int WRITE_EXTERNAL_STORAGE_REQUEST_CODE = 1100;
     protected static ObjectMapper mapper = new ObjectMapper();
+    Activity context = null;
+    Uri contentUri = null;
+    String authority = null;
 
     @Override
     public TableStore retrieve(String path) throws  IOException {
@@ -34,4 +42,6 @@ public abstract class AbsBackupServer implements BackupServer {
         }
         mapper.writeValue(json, store);
     }
+
+
 }

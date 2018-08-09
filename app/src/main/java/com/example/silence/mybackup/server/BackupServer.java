@@ -1,5 +1,8 @@
 package com.example.silence.mybackup.server;
 
+import android.content.OperationApplicationException;
+import android.os.RemoteException;
+
 import com.example.silence.mybackup.util.SimpleStore;
 import com.example.silence.mybackup.util.TableStore;
 
@@ -17,5 +20,5 @@ public interface BackupServer {
     // 恢复
      TableStore retrieve(String path) throws  IOException;
     // 同步
-     void sync(TableStore store);
+     boolean sync(TableStore store);
 }

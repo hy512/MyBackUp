@@ -64,7 +64,6 @@ public class SMSActivity extends ActivityBackupServer {
     public void displayOptions() {
         List<ViewUtil.DialogOption> options = new ArrayList<>();
 
-
         options.add(new ViewUtil.DialogOption(
            "备份",
                 (View v) -> {
@@ -86,8 +85,6 @@ public class SMSActivity extends ActivityBackupServer {
                     try {
                         String path = getBackupPath();
                         TableStore store = server.retrieve(path + "/ms.json");
-//                        Log.d("--->", store.toString());
-//                        Log.d("--->", "size " + store.size());
                         appendContent(store);
                         Toast.makeText(SMSActivity.this, "操作成功, "+ store.size() + "条数据添加.", Toast.LENGTH_SHORT).show();
                     } catch (IllegalStateException e) {
