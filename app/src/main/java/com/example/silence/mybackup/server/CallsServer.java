@@ -14,11 +14,13 @@ import android.provider.CallLog;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.widget.ResourceCursorAdapter;
+import android.telecom.Call;
 import android.util.Log;
 
 import com.example.silence.mybackup.util.TableStore;
 
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.security.Permission;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -67,6 +69,7 @@ public class CallsServer extends AbsBackupServer {
                     cursor.getString(cursor.getColumnIndex(table.field(9)))
             });
         }
+        cursor.close();
         return table;
     }
 
@@ -86,12 +89,44 @@ public class CallsServer extends AbsBackupServer {
     // 排序并去重
     @Override
     public TableStore tidy(TableStore store) {
+        // 去重
+        store.distinct(new int[]{
+                store.field(CallLog.Calls._ID),
+                store.field(CallLog.Calls.COUNTRY_ISO),
+                store.field(CallLog.Calls.GEOCODED_LOCATION),
+                store.field(CallLog.Calls.VOICEMAIL_URI)});
+        // 排序
         Collections.sort(store, (TableStore.Row o1, TableStore.Row o2) -> {
-            ;
-            Long.class.cast(o1.get(store.field(CallLog.Calls._ID)));
+            // 相等
+            if (o1.equals(o2)) return 0;
+            // 比较 id
+            {
+                Long id1 = o1.retrieve(store.field(CallLog.Calls._ID));
+                Long id2 = o2.retrieve(store.field(CallLog.Calls._ID));
+                // id 值大的就大
+                if (id1 != null && id2 != null)
+                    if (id1.longValue() != id2.longValue())
+                        return id1.longValue() > id2.longValue() ? 1 : -1;
+            }
+            // 比较 date
+            {
+                Long date1 = o1.retrieve(store.field(CallLog.Calls.DATE));
+                Long date2 = o2.retrieve(store.field(CallLog.Calls.DATE));
+                // date 值大就小
+                if (date1 != null && date2 != null) {
+                    if (!date1.equals(date2)) {
+                        return date1.longValue() > date2.longValue() ? -1 : 1;
+                    }
+                }
+                // date 为 null 者小
+                else {
+                    if (date1 == null) return -1;
+                    if (date2 == null) return 1;
+                }
+            }
             return 0;
         });
-        return null;
+        return store;
     }
 
 
@@ -143,11 +178,23 @@ public class CallsServer extends AbsBackupServer {
         context.getContentResolver().applyBatch(authority, options);
     }
 
-    public void batchDelete(TableStore store) {
+    public void batchDelete(TableStore store) throws RemoteException, OperationApplicationException {
+        ArrayList<ContentProviderOperation> operations = new ArrayList<>();
 
+        ContentProviderOperation.Builder operation;
+        for (int r = 0; r < store.size(); r++) {
+            operation = ContentProviderOperation.newDelete(contentUri);
+            if (store.retrieve(r, CallLog.Calls._ID) != null)
+                operations.add(operation
+                        .withSelection(CallLog.Calls._ID.concat("=?"), new String[]{store.retrieve(r, CallLog.Calls._ID).toString()})
+                        .withYieldAllowed(true)
+                        .build());
+        }
+
+        context.getContentResolver().applyBatch(authority, operations);
     }
 
     public void batchUpdate(TableStore store) {
-
+//        Array<ContentProviderOperation>
     }
 }

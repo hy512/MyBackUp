@@ -11,6 +11,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.telecom.Call;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.widget.TextView;
@@ -56,7 +57,21 @@ public class CallsActivity extends ActivityBackupServer {
     @Override
     public void displayOptions() {
         List<ViewUtil.DialogOption> options = new ArrayList<>();
-
+        options.add(new ViewUtil.DialogOption(
+                R.string.list_options_tidy,
+                (View v) -> {
+                    TableStore store = server.tidy(table);
+                    Log.d("--->", store.toString() );
+                    Log.d("--->", store.size() + "");
+                    setContent(store);
+                    Toast.makeText(CallsActivity.this, String.format("操作成功, 数量 %d.", store.size()), Toast.LENGTH_SHORT).show();
+                }));
+        options.add(new ViewUtil.DialogOption(
+                "清空",
+                (View v) -> {
+                    table.clear();
+                    setContent(table);
+                }));
         options.add(new ViewUtil.DialogOption(
                 "备份",
                 (View v) -> {

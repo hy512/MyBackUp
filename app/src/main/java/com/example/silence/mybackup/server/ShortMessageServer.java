@@ -1,8 +1,10 @@
 package com.example.silence.mybackup.server;
 
 import android.app.Activity;
+import android.app.FragmentManager;
 import android.content.ContentProviderOperation;
 import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.OperationApplicationException;
 import android.database.Cursor;
 import android.net.Uri;
@@ -25,7 +27,6 @@ import java.util.Objects;
 
 public class ShortMessageServer extends AbsBackupServer {
     public static int READ_SMS_REQUEST_CODE = 100;
-
 
 
     public ShortMessageServer(Activity activity) {
@@ -77,42 +78,48 @@ public class ShortMessageServer extends AbsBackupServer {
 
         String[] fields = new String[]{
                 Telephony.Sms._ID,
-                Telephony.Sms.DATE,
-                Telephony.Sms.PERSON,
-                Telephony.Sms.TYPE,
+                Telephony.Sms.THREAD_ID,
                 Telephony.Sms.ADDRESS,
+                Telephony.Sms.PERSON,
+                Telephony.Sms.DATE,
+                Telephony.Sms.DATE_SENT,
+                Telephony.Sms.PROTOCOL,
                 Telephony.Sms.STATUS,
-                Telephony.Sms.READ,
-                Telephony.Sms.BODY
+                Telephony.Sms.REPLY_PATH_PRESENT,
+                Telephony.Sms.BODY,
+                Telephony.Sms.SERVICE_CENTER,
+                Telephony.Sms.LOCKED,
+                Telephony.Sms.ERROR_CODE,
+                Telephony.Sms.SEEN,
+//
+                Telephony.Sms.TYPE,
+                Telephony.Sms.READ
         };
         Cursor cursor = resolver.query(contentUri, fields, null, null, null);
         TableStore ms = new TableStore(fields);
-        while (cursor.moveToNext()) {
-            ms.insertRow(new Object[]{
-                    cursor.getLong(cursor.getColumnIndex(ms.field(0))),
-                    cursor.getLong(cursor.getColumnIndex(ms.field(1))),
-                    cursor.getString(cursor.getColumnIndex(ms.field(2))),
-                    cursor.getInt(cursor.getColumnIndex(ms.field(3))),
-                    cursor.getString(cursor.getColumnIndex(ms.field(4))),
-                    cursor.getInt(cursor.getColumnIndex(ms.field(5))),
-                    cursor.getInt(cursor.getColumnIndex(ms.field(6))),
-                    cursor.getString(cursor.getColumnIndex(ms.field(7)))
-            });
-        }
 
+
+        while (cursor.moveToNext()) {
+            Object[] row = new Object[fields.length];
+            row[0] = cursor.getLong(cursor.getColumnIndex(ms.field(0)));
+            for (int i=1; i<fields.length; i++)
+                row[i] = cursor.getString(cursor.getColumnIndex(ms.field(i)));
+            ms.insertRow(row);
+        }
+        cursor.close();
         return ms;
     }
 
     @Override
     public TableStore retrieve(String path) throws IOException {
         TableStore store = super.retrieve(path);
-        store.insertColumnOfNull(0, Telephony.Mms._ID);
+        store.insertColumnOfNull(0, Telephony.Sms._ID);
         return store;
     }
 
     @Override
     public void store(String path, TableStore store) throws IOException {
-        store.removeColumn(Telephony.Mms._ID);
+        store.removeColumn(Telephony.Sms._ID);
         super.store(path, store);
     }
 
@@ -123,7 +130,7 @@ public class ShortMessageServer extends AbsBackupServer {
 
 
     @Override
-    public boolean sync(TableStore store)  {
+    public boolean sync(TableStore store) {
         try {
             TableStore local = load();
             // 交集
@@ -143,7 +150,7 @@ public class ShortMessageServer extends AbsBackupServer {
             // 更新
             batchUpdate(intersection);
             return true;
-        } catch (CloneNotSupportedException e ) {
+        } catch (CloneNotSupportedException e) {
             e.printStackTrace();
         } catch (RemoteException e) {
             e.printStackTrace();
@@ -153,26 +160,41 @@ public class ShortMessageServer extends AbsBackupServer {
         return false;
     }
 
+//    public void batchInsert(TableStore store) throws RemoteException, OperationApplicationException {
+//        ArrayList<ContentProviderOperation> operations = new ArrayList<>();
+//
+//        ContentProviderOperation.Builder operation;
+//        for (int r = 0; r < store.size(); r++) {
+//            operation = ContentProviderOperation.newInsert(Uri.parse("content://sms/inbox"));
+//            for (int c = 0; c < store.getWidth(); c++) {
+//                if (store.retrieve(r, c) !=  null)
+//                    operation.withValue(store.field(c), store.retrieve(r, c));
+//            }
+//            operations.add(operation
+//                    .withYieldAllowed(true)
+//                    .build());
+//        }
+//
+//        context.getContentResolver().applyBatch(Uri.parse("content://sms/inbox").getAuthority(), operations);
+//    }
+
     public void batchInsert(TableStore store) throws RemoteException, OperationApplicationException {
-        ArrayList<ContentProviderOperation> operations = new ArrayList<>();
-
-        ContentProviderOperation.Builder operation;
+        ContentValues values;
+        ContentResolver resolver = context.getContentResolver();
         for (int r = 0; r < store.size(); r++) {
-            operation = ContentProviderOperation.newInsert(contentUri);
+            values = new ContentValues();
             for (int c = 0; c < store.getWidth(); c++) {
-                operation.withValue(store.field(c), store.retrieve(r, c));
+                if (store.retrieve(r, c) != null)
+                    values.put(store.field(c), store.retrieve(r, c).toString());
             }
-            operations.add(operation
-                    .withYieldAllowed(true)
-                    .build());
+            resolver.insert(Uri.parse("content://sms/inbox"), values);
         }
-
-        context.getContentResolver().applyBatch(authority, operations);
     }
 
     public void batchDelete(TableStore store) {
 
     }
+
     public void batchUpdate(TableStore store) {
 
     }

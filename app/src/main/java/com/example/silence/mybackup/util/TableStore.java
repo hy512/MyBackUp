@@ -1,6 +1,8 @@
 package com.example.silence.mybackup.util;
 
 
+import android.util.Log;
+
 import org.codehaus.jackson.map.annotate.JsonDeserialize;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
 
@@ -30,19 +32,22 @@ public class TableStore extends SimpleList<TableStore.Row> implements Serializab
     Class[] type;
     int width;
 
-    private TableStore() {
-        this.elementData = DEFAULTCAPACITY_EMPTY_ELEMENTDATA;
-        this.size = 0;
-    }
 
     public TableStore(String[] head) {
-        this();
+        super();
         this.width = head.length;
         this.head = head;
     }
 
     public TableStore(String[] head, Class[] type) {
         this(head);
+        this.type = type;
+    }
+
+    public TableStore(String[] head, Class[] type, Object[] data) {
+        super(data);
+        this.head = head;
+        this.width = head.length;
         this.type = type;
     }
 
@@ -70,21 +75,48 @@ public class TableStore extends SimpleList<TableStore.Row> implements Serializab
         return Arrays.copyOf(head, width);
     }
 
+    // 去除相等的数据
+    // exclude 排除比较的列
+    public void distinct(int[] exclude) {
+        for (int r = size - 1; r >= 0; r--) {
+            for (int p = r - 1, c; p >= 0; p--) {
+                for ( c = width - 1; c >= 0; c--) {
+                    // 排除的值，将不进行比较(表示默认相同)
+                    if (Arrays.binarySearch(exclude, c) >= 0 ) {
+                        continue;
+                    }
+
+                    // 有不相等的值，移动到下一行
+                    if (retrieve(r, c) != null)
+                        if (!retrieve(r, c).equals(retrieve(p, c))) break;
+                    if (retrieve(r, c) == null && retrieve(p, c) != null) break;
+                }
+                // 判断为相等 (迭代全走完了，没有不同 break)，删除相同的行
+                if (c == -1) {
+                    // 删除 p 行
+                    remove(p);
+                    if (--r < 0) return;
+                }
+            }
+        }
+    }
+
     // 获取指定元素
-    public Object retrieve(int row, int col) {
+    public <K extends Object> K retrieve(int row, int col) {
         if (row < 0) row += size;
         if (col < 0) col += width;
         if (row < 0 || row >= size || col < 0 || col >= width)
             throw new IndexOutOfBoundsException(String.format("row: %d, col: %d", row, col));
-        return get(row).get(col);
+        if (get(row) == null) throw new NullPointerException("Why row ".concat(row + " is null?"));
+        return (K) get(row).get(col);
     }
 
-    public Object retrieve(int row, String title) {
+    public <K extends Object> K retrieve(int row, String title) {
         if (row < 0) row += size;
         if (row >= size || row < 0) throw new IndexOutOfBoundsException(outOfBoundsMsg(row, size));
         int col = field(title);
         if (col < 0) throw new IllegalStateException("没有 " + title);
-        return get(row).get(col);
+        return retrieve(row, col);
     }
 
     // 获取指定行
@@ -193,6 +225,10 @@ public class TableStore extends SimpleList<TableStore.Row> implements Serializab
             super(data);
         }
 
+        public <K extends Object> K retrieve(int index) {
+            return (K) get(index);
+        }
+
         @Override
         public boolean equals(Object obj) {
             if (obj != null) {
@@ -210,7 +246,7 @@ public class TableStore extends SimpleList<TableStore.Row> implements Serializab
         public String toString() {
             StringBuilder builder = new StringBuilder();
             for (int i = 0; i < size; i++) {
-                builder.append((elementData[i] != null ? elementData[i].toString() : "null") + '\t');
+                builder.append((elementData[i] != null ? elementData[i].toString() : "null") + "\t");
             }
             builder.append('\n');
             return builder.toString();
@@ -218,8 +254,10 @@ public class TableStore extends SimpleList<TableStore.Row> implements Serializab
     }
 
 
+    @Override
     public TableStore clone() throws CloneNotSupportedException {
-        return (TableStore) super.clone();
+//        return (TableStore) super.clone();
+        return new TableStore(head, type, toArray());
     }
 }
 

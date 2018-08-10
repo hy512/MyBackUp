@@ -121,10 +121,10 @@ public class SimpleStore<T> {
         for (int l = length - 1; l >= 0; l--) {
             for (int p = l - 1; p >= 0; p--) {
                 for (int s = width - 1; s >= 0; s--) {
-                    Log.d("-->", String.format("%d, %d, %d", l, p, s));
-                    Log.d("-->", String.format("%s === %s",
-                            store[s][l] == null? "null":store[s][l].toString(),
-                            store[s][p] == null? "null":store[s][p].toString()));
+//                    Log.d("-->", String.format("%d, %d, %d", l, p, s));
+//                    Log.d("-->", String.format("%s === %s",
+//                            store[s][l] == null? "null":store[s][l].toString(),
+//                            store[s][p] == null? "null":store[s][p].toString()));
                     if ((store[s][l] == null && store[s][p] == null) ||
                             (store[s][l] != null &&
                                     store[s][p] != null &&
@@ -132,11 +132,11 @@ public class SimpleStore<T> {
                         if (s == 0) {
                             remove(p);
                             if (--l < 0) return;
-                            Log.d("--->", "delete");
+//                            Log.d("--->", "delete");
                         }
                     } else break;
                 }
-                Log.d("--->", "next");
+//                Log.d("--->", "next");
             }
         }
     }
