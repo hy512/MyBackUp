@@ -178,19 +178,33 @@ public class ContactServer_v1 extends AbsBackupServer {
     }
 
     public void batchDelete(TableStore store) throws RemoteException, OperationApplicationException {
-//        ArrayList<ContentProviderOperation> operations = new ArrayList<>();
-//
-//        ContentProviderOperation.Builder operation;
-//        for (int r = 0; r < store.size(); r++) {
-//            operation = ContentProviderOperation.newDelete(contentUri);
-//            if (store.retrieve(r, CallLog.Calls._ID) != null)
-//                operations.add(operation
-//                        .withSelection(CallLog.Calls._ID.concat("=?"), new String[]{store.retrieve(r, CallLog.Calls._ID).toString()})
-//                        .withYieldAllowed(true)
-//                        .build());
-//        }
-//
-//        context.getContentResolver().applyBatch(authority, operations);
+        store = tidy(store);
+
+        ArrayList<ContentProviderOperation> operations = new ArrayList<>();
+
+        String rawId = null;
+
+        ContentProviderOperation.Builder operation;
+        for (int r = 0; r < store.size(); r++) {
+
+            operation = ContentProviderOperation.newDelete(contentUri);
+            if (store.retrieve(r, ContactsContract.Data._ID) != null) {
+                operations.add(operation
+                        .withSelection(ContactsContract.Data._ID.concat("=?"), new String[]{store.retrieve(r, ContactsContract.Data._ID).toString()})
+                        .withYieldAllowed(true)
+                        .build());
+                // 准备删除 raw 表中内容
+                if (store.retrieve(r, ContactsContract.Data._ID).equals(rawId)) {
+                    if (rawId != null)
+                        operations.add(ContentProviderOperation.newDelete(ContactsContract.RawContacts.CONTENT_URI)
+                        .withSelection(ContactsContract.RawContacts._ID+"=?",
+                                new String[]{rawId}).withYieldAllowed(true).build());
+                    rawId = store.retrieve(r, ContactsContract.Data._ID);
+                }
+            }
+        }
+
+        context.getContentResolver().applyBatch(authority, operations);
     }
 
     public void batchUpdate(TableStore store) {

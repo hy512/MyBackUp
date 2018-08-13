@@ -61,7 +61,7 @@ public class CallsServer extends AbsBackupServer {
 //                CallLog.Calls.CONTENT_ITEM_TYPE,
 //                CallLog.Calls.CONTENT_TYPE,
                 CallLog.Calls.NUMBER_PRESENTATION,
-                CallLog.Calls.PHONE_ACCOUNT_COMPONENT_NAME
+//                CallLog.Calls.PHONE_ACCOUNT_COMPONENT_NAME
 //                CallLog.Calls.VIA_NUMBER
         };
 
