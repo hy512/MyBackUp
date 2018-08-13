@@ -50,24 +50,31 @@ public class CallsServer extends AbsBackupServer {
                 CallLog.Calls.IS_READ,
                 CallLog.Calls.VOICEMAIL_URI,
                 CallLog.Calls.COUNTRY_ISO,
-                CallLog.Calls.GEOCODED_LOCATION
+                CallLog.Calls.GEOCODED_LOCATION,
+                CallLog.Calls.CACHED_FORMATTED_NUMBER,
+                CallLog.Calls.CACHED_LOOKUP_URI,
+                CallLog.Calls.CACHED_MATCHED_NUMBER,
+                CallLog.Calls.CACHED_NAME,
+                CallLog.Calls.CACHED_NORMALIZED_NUMBER,
+                CallLog.Calls.CACHED_NUMBER_LABEL,
+                CallLog.Calls.CACHED_NUMBER_TYPE,
+//                CallLog.Calls.CONTENT_ITEM_TYPE,
+//                CallLog.Calls.CONTENT_TYPE,
+                CallLog.Calls.NUMBER_PRESENTATION,
+                CallLog.Calls.PHONE_ACCOUNT_COMPONENT_NAME
+//                CallLog.Calls.VIA_NUMBER
         };
 
         TableStore table = new TableStore(fields);
         Cursor cursor = resolver.query(contentUri, fields, null, null, null);
+
+        Object[] row ;
         while (cursor.moveToNext()) {
-            table.insertRow(new Object[]{
-                    cursor.getLong(cursor.getColumnIndex(table.field(0))),
-                    cursor.getInt(cursor.getColumnIndex(table.field(1))),
-                    cursor.getString(cursor.getColumnIndex(table.field(2))),
-                    cursor.getLong(cursor.getColumnIndex(table.field(3))),
-                    cursor.getInt(cursor.getColumnIndex(table.field(4))),
-                    cursor.getInt(cursor.getColumnIndex(table.field(5))),
-                    cursor.getInt(cursor.getColumnIndex(table.field(6))),
-                    cursor.getString(cursor.getColumnIndex(table.field(7))),
-                    cursor.getString(cursor.getColumnIndex(table.field(8))),
-                    cursor.getString(cursor.getColumnIndex(table.field(9)))
-            });
+            row = new Object[fields.length];
+            row[0] = cursor.getLong(cursor.getColumnIndex(table.field(0)));
+            for (int i=1; i<fields.length; i++)
+                row[i] = cursor.getString(cursor.getColumnIndex(table.field(i)));
+            table.insertRow(row);
         }
         cursor.close();
         return table;
@@ -133,6 +140,8 @@ public class CallsServer extends AbsBackupServer {
     @Override
     public boolean sync(TableStore store) {
         try {
+            store = store.clone();
+
             TableStore local = load();
             // 交集
             TableStore intersection = store.clone();

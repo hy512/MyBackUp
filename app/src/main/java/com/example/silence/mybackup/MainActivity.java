@@ -72,7 +72,7 @@ public class MainActivity extends AppCompatActivity {
                         .setIndicator("联系人")
                         .setContent(new Intent(
                                 MainActivity.this,
-                                ContactsActivity.class)));
+                                ContactsActivity_v1.class)));
 
         host.addTab(host.newTabSpec("calls")
                 .setIndicator("通话记录")
